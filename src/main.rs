@@ -6,6 +6,7 @@ use structopt::StructOpt;
 
 mod blob;
 mod upload;
+mod manifests;
 
 #[derive(StructOpt, Clone)]
 #[structopt(name = "blobert", about = "Another OCI registry")]
@@ -64,6 +65,9 @@ async fn main() -> std::io::Result<()> {
             .route("/v2/", web::get().to(Blobert::v2))
             .route("/v2/{namespace}/blobs/uploads/", web::post().to(upload::start_blob_upload))
             .route("/v2/{namespace}/blobs/upload/{id}", web::patch().to(upload::patch_blob_data))
+            .route("/v2/{namespace}/blobs/upload/{id}", web::put().to(upload::put_blob_upload_complete))
+            .route("/v2/{namespace}/blobs/{digest}", web::head().to(upload::blob_exists))
+            .route("/v2/{namespace}/manifests/{reference}", web::put().to(manifests::put_manifest))
     })
     .bind(bind_addr)?
     .run()

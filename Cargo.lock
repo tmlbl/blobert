@@ -276,6 +276,7 @@ dependencies = [
  "futures",
  "log",
  "oci-distribution",
+ "serde",
  "structopt",
  "uuid",
 ]

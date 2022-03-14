@@ -4,6 +4,7 @@ use futures::StreamExt;
 use uuid::Uuid;
 use log::error;
 use std::io::Write;
+use serde::Deserialize;
 
 use crate::Blobert;
 
@@ -60,4 +61,36 @@ pub async fn patch_blob_data(req: HttpRequest, mut payload: web::Payload) -> imp
         .append_header(("Content-Length", "0"))
         .append_header(("Range", format!("0-{}", written)))
         .finish()
+}
+
+#[derive(Deserialize)]
+pub struct PutDigest {
+    digest: String
+}
+
+pub async fn put_blob_upload_complete(req: HttpRequest, info: web::Query<PutDigest>) -> impl Responder {
+    let blobert: &Blobert = req.app_data().unwrap();
+    let id = req.match_info().get("id").unwrap();
+
+    match blobert.store.commit(id, &info.digest) {
+        Ok(_) => HttpResponse::Created()
+            .append_header(("Content-Length", "0"))
+            .append_header(("Docker-Content-Digest", info.digest.clone()))
+            .finish(),
+        Err(e) => {
+            error!("Error getting chunk: {}", e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn blob_exists(req: HttpRequest) -> impl Responder {
+    let blobert: &Blobert = req.app_data().unwrap();
+    let digest = req.match_info().get("digest").unwrap();
+    match blobert.store.blob_exists(digest) {
+        true => HttpResponse::Ok()
+            .append_header(("Docker-Content-Digest", digest))
+            .finish(),
+        false => HttpResponse::NotFound().finish()
+    }
 }

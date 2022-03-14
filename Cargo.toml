@@ -14,3 +14,4 @@ bytes = "1.1.0"
 uuid = { version = "0.8", features = ["v4"] }
 structopt = "0.3.26"
 log = "0.4.14"
+serde = "1.0.136"
