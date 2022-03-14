@@ -1,65 +1,71 @@
 // use oci_distribution::manifest;
-use actix_web::{web, App, HttpServer, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder};
 use actix_web::middleware::Logger;
 use env_logger::Env;
-use futures::StreamExt;
+use structopt::StructOpt;
 
-mod store;
+mod blob;
+mod upload;
 
-const bind_addr: &str = "127.0.0.1";
-const port: i32 = 8080;
+#[derive(StructOpt, Clone)]
+#[structopt(name = "blobert", about = "Another OCI registry")]
+pub struct Options {
+    #[structopt(long, default_value = "http")]
+    protocol: String,
 
-fn get_bind_addr() -> String {
-    format!("{bind_addr}:{port}")
+    #[structopt(short, long, default_value = "127.0.0.1")]
+    host: String,
+
+    #[structopt(short, long, default_value = "7000")]
+    port: usize,
+
+    #[structopt(short = "log", long, default_value = "info")]
+    log_level: String,
 }
 
-async fn create_blob_upload(req: HttpRequest) -> HttpResponse {
-    let name = req.match_info().get("name").unwrap();
-    println!("Namespace: {}", name);
-    HttpResponse::Accepted()
-        .append_header(("Location", format!("http://{bind_addr}:{port}/upload")))
-        .finish()
+impl Options {
+    pub fn get_bind_addr(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+
+    pub fn get_server_url(&self) -> String {
+        format!("{}://{}", self.protocol, self.get_bind_addr())
+    }
 }
 
-async fn handle_upload(mut payload: web::Payload) -> impl Responder {
-    let mut blob = match store::BlobFile::new() {
-        Ok(blob) => blob,
-        Err(e) => {
-            return HttpResponse::InternalServerError()
-        },
-    };
-    while let Some(chunk) = payload.next().await {
-        match chunk {
-            Ok(chunk) => {
-                println!("Writing chunk to {}", blob.get_path());
-                blob.write_chunk(chunk);
-            },
-            Err(e) => {
-                return HttpResponse::InternalServerError()
-            }
+pub struct Blobert {
+    pub opts: Options,
+    pub store: blob::Store
+}
+
+impl Blobert {
+    fn new() -> Blobert {
+        Blobert {
+            opts: Options::from_args(),
+            store: blob::Store::new("/tmp/data")
         }
     }
-    HttpResponse::Accepted()
-}
 
-async fn v2() -> impl Responder {
-    HttpResponse::Ok().body("true")
+    async fn v2() -> impl Responder {
+        HttpResponse::Ok().body("true")
+    }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
+    let opts = Options::from_args();
+    let bind_addr = opts.get_bind_addr();
+    env_logger::init_from_env(Env::default().default_filter_or(&opts.log_level));
 
-    let blob = store::BlobFile::new();
-
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
-            .wrap(Logger::default())
-            .route("/v2/", web::get().to(v2))
-            .route("/v2/{name}/blobs/uploads/", web::post().to(create_blob_upload))
-            .route("/upload", web::patch().to(handle_upload))
+            .app_data(Blobert::new())
+            .wrap(Logger::new("%r"))
+            .route("/v2/", web::get().to(Blobert::v2))
+            .route("/v2/{namespace}/blobs/uploads/", web::post().to(upload::start_blob_upload))
+            .route("/v2/{namespace}/blobs/upload/{id}", web::patch().to(upload::patch_blob_data))
     })
-    .bind(get_bind_addr())?
+    .bind(bind_addr)?
     .run()
     .await
 }
