@@ -1,14 +1,28 @@
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
-use oci_distribution::manifest::OciManifest;
+use actix_web::{web, HttpRequest, HttpResponse, Responder, error::PayloadError};
+// use oci_distribution::manifest::OciManifest;
 use futures::StreamExt;
+use log::{error, debug};
+use serde::Serialize;
+use sha2::Digest;
 
+use crate::Blobert;
+
+#[derive(Serialize)]
 struct PutManifestResponse {
     name: String,
     tags: Vec<String>
 }
 
+/// Computes the SHA256 digest of a byte vector
+fn sha256_digest(bytes: &[u8]) -> String {
+    format!("sha256:{:x}", sha2::Sha256::digest(bytes))
+}
+
 pub async fn put_manifest(req: HttpRequest, mut payload: web::Payload) -> impl Responder {
-    // payload is a stream of Bytes objects
+    let blobert: &Blobert = req.app_data().unwrap();
+    let namespace = req.match_info().get("namespace").unwrap();
+    let reference = req.match_info().get("reference").unwrap();
+
     let mut body = web::BytesMut::new();
     while let Some(chunk) = payload.next().await {
         match chunk {
@@ -17,7 +31,27 @@ pub async fn put_manifest(req: HttpRequest, mut payload: web::Payload) -> impl R
         }
     }
 
-    println!("Payload: {}", std::str::from_utf8(&body).unwrap());
+    match blobert.store.store_manifest(namespace, reference, &body) {
+        Ok(_) => {
+            let tags = blobert.store.get_manifest_tags(namespace);
+            let response = PutManifestResponse {
+                name: reference.to_string(),
+                tags,
+            };
+            let location = format!("{}/v2/{}/manifests/{}", 
+                blobert.opts.get_server_url(), namespace, reference);
+            let man_bytes = serde_json::to_vec(&response).unwrap();
+            let digest = sha256_digest(&man_bytes);
+            debug!("Manifest {}/{} hash: {}", namespace, reference, digest);
 
-    Ok(HttpResponse::Ok())
+            Ok(HttpResponse::Created()
+                .append_header(("Location", location))
+                .append_header(("Docker-Content-Digest", digest))
+                .body(man_bytes))
+        },
+        Err(e) => {
+            error!("Error storing manifest file: {}", e);
+            Err(PayloadError::EncodingCorrupted)
+        }
+    }
 }
