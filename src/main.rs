@@ -7,6 +7,7 @@ use structopt::StructOpt;
 mod blob;
 mod upload;
 mod manifests;
+mod meta;
 
 #[derive(StructOpt, Clone)]
 #[structopt(name = "blobert", about = "Another OCI registry")]
@@ -36,14 +37,17 @@ impl Options {
 
 pub struct Blobert {
     pub opts: Options,
-    pub store: blob::Store
+    pub meta_store: Box<dyn meta::Store>,
+    pub blob_store: blob::Store
 }
 
 impl Blobert {
     fn new() -> Blobert {
+        let meta_store = meta::fs::Filesystem::new("/tmp/data").unwrap();
         Blobert {
             opts: Options::from_args(),
-            store: blob::Store::new("/tmp/data")
+            meta_store: Box::new(meta_store),
+            blob_store: blob::Store::new("/tmp/data")
         }
     }
 

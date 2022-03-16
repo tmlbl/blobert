@@ -31,9 +31,17 @@ pub async fn put_manifest(req: HttpRequest, mut payload: web::Payload) -> impl R
         }
     }
 
-    match blobert.store.store_manifest(namespace, reference, &body) {
+    let manifest = match serde_json::from_slice(&body) {
+        Err(e) => {
+            error!("Error decoding manifest: {}", e);
+            return Ok(HttpResponse::BadRequest().finish())
+        },
+        Ok(man) => man,
+    };
+
+    match blobert.meta_store.put_manifest(namespace, reference, &manifest) {
         Ok(_) => {
-            let tags = blobert.store.get_manifest_tags(namespace);
+            let tags = blobert.meta_store.list_tags(namespace);
             let response = PutManifestResponse {
                 name: reference.to_string(),
                 tags,
@@ -45,6 +53,7 @@ pub async fn put_manifest(req: HttpRequest, mut payload: web::Payload) -> impl R
             debug!("Manifest {}/{} hash: {}", namespace, reference, digest);
 
             Ok(HttpResponse::Created()
+                .append_header(("Content-Type", "application/json"))
                 .append_header(("Location", location))
                 .append_header(("Docker-Content-Digest", digest))
                 .body(man_bytes))

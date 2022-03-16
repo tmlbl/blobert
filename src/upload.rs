@@ -26,7 +26,7 @@ pub async fn patch_blob_data(req: HttpRequest, mut payload: web::Payload) -> imp
     let namespace = req.match_info().get("namespace").unwrap();
     let id = req.match_info().get("id").unwrap();
 
-    let mut blobfile = match blobert.store.get_upload_file(id) {
+    let mut blobfile = match blobert.blob_store.get_upload_file(id) {
         Ok(f) => f,
         Err(e) => {
             error!("Error getting upload file: {}", e);
@@ -72,7 +72,7 @@ pub async fn put_blob_upload_complete(req: HttpRequest, info: web::Query<PutDige
     let blobert: &Blobert = req.app_data().unwrap();
     let id = req.match_info().get("id").unwrap();
 
-    match blobert.store.commit(id, &info.digest) {
+    match blobert.blob_store.commit(id, &info.digest) {
         Ok(_) => HttpResponse::Created()
             .append_header(("Content-Length", "0"))
             .append_header(("Docker-Content-Digest", info.digest.clone()))
@@ -87,7 +87,7 @@ pub async fn put_blob_upload_complete(req: HttpRequest, info: web::Query<PutDige
 pub async fn blob_exists(req: HttpRequest) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
     let digest = req.match_info().get("digest").unwrap();
-    match blobert.store.blob_exists(digest) {
+    match blobert.blob_store.blob_exists(digest) {
         true => HttpResponse::Ok()
             .append_header(("Docker-Content-Digest", digest))
             .finish(),
