@@ -3,9 +3,9 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder, error::PayloadError};
 use futures::StreamExt;
 use log::{error, debug};
 use serde::Serialize;
-use sha2::Digest;
 
 use crate::Blobert;
+use crate::util::*;
 
 #[derive(Serialize)]
 struct PutManifestResponse {
@@ -13,9 +13,26 @@ struct PutManifestResponse {
     tags: Vec<String>
 }
 
-/// Computes the SHA256 digest of a byte vector
-fn sha256_digest(bytes: &[u8]) -> String {
-    format!("sha256:{:x}", sha2::Sha256::digest(bytes))
+pub async fn get_manifest(req: HttpRequest) -> impl Responder {
+    let blobert: &Blobert = req.app_data().unwrap();
+    let namespace = req.match_info().get("namespace").unwrap();
+    let reference = req.match_info().get("reference").unwrap();
+
+    match blobert.meta_store.get_manifest(namespace, reference) {
+        Ok(manifest) => {
+            let payload = serde_json::to_vec(&manifest).unwrap();
+            HttpResponse::Ok()
+                .append_header(("Content-Type", crate::meta::IMAGE_MANIFEST_MEDIA_TYPE))
+                .append_header(("Content-Length", format!("{}", payload.len())))
+                .append_header(("Docker-Content-Digest", manifest.digest()))
+                .body(payload)
+        },
+        Err(e) => {
+            error!("Error retrieving manifest {}/{}: {}",
+                namespace, reference, e);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
 pub async fn put_manifest(req: HttpRequest, mut payload: web::Payload) -> impl Responder {

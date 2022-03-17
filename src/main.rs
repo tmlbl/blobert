@@ -4,6 +4,7 @@ use actix_web::middleware::Logger;
 use env_logger::Env;
 use structopt::StructOpt;
 
+mod util;
 mod blob;
 mod upload;
 mod manifests;
@@ -72,6 +73,8 @@ async fn main() -> std::io::Result<()> {
             .route("/v2/{namespace}/blobs/upload/{id}", web::put().to(upload::put_blob_upload_complete))
             .route("/v2/{namespace}/blobs/{digest}", web::head().to(upload::blob_exists))
             .route("/v2/{namespace}/manifests/{reference}", web::put().to(manifests::put_manifest))
+            .route("/v2/{namespace}/manifests/{reference}", web::head().to(manifests::get_manifest))
+            .route("/v2/{namespace}/manifests/{reference}", web::get().to(manifests::get_manifest))
     })
     .bind(bind_addr)?
     .run()

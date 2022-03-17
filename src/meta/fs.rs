@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, os::unix::fs};
 
 use crate::meta::{Store, Manifest};
 
@@ -26,11 +26,19 @@ impl Filesystem {
 }
 
 impl Store for Filesystem {
-    fn put_manifest(&self, namespace: &str, reference: &str, m: &Manifest) -> Result<(), std::io::Error> {
-        let mut path = self.get_manifest_path(namespace);
-        path.push(reference);
+    fn put_manifest(&self, namespace: &str, tag: &str, m: &Manifest) -> Result<(), std::io::Error> {
+        let mut tag_path = self.get_manifest_path(namespace);
+        tag_path.push(tag);
 
-        std::fs::write(path, serde_json::to_vec(m).unwrap())
+        let mut sha_path = self.get_manifest_path(namespace);
+        sha_path.push(m.digest());
+
+        match std::fs::write(&sha_path, serde_json::to_vec(m).unwrap()) {
+            Err(e) => Err(e),
+            Ok(_) => {
+                fs::symlink(sha_path, tag_path)
+            }
+        }
     }
 
     fn get_manifest(&self, namespace: &str, reference: &str) -> Result<Manifest, std::io::Error> {
@@ -48,7 +56,9 @@ impl Store for Filesystem {
         let mut tags: Vec<String> = Vec::new();
         for (_, entry) in dir.enumerate() {
             let entry = entry.unwrap();
-            tags.push(String::from(entry.file_name().to_str().unwrap()));
+            if entry.file_type().unwrap().is_symlink() {
+                tags.push(String::from(entry.file_name().to_str().unwrap()));
+            }
         }
         tags
     }

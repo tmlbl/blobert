@@ -1,9 +1,10 @@
 use std::io;
+use std::collections::HashMap;
 
 pub mod fs;
 mod manifest;
 
-pub use manifest::Manifest;
+pub use manifest::*;
 
 pub trait Store {
     fn put_manifest(&self, namespace: &str, reference: &str, m: &Manifest) -> Result<(), io::Error>;
@@ -31,11 +32,22 @@ mod tests {
         assert_eq!(s.list_tags("tags"), vec!["one", "three", "two"])
     }
 
+    fn stores_by_digest_and_tag(s: &dyn Store) {
+        let mut m = Manifest::default();
+        let mut anno = HashMap::new();
+        anno.insert(String::from("foo"), String::from("bar"));
+        m.annotations = Some(anno);
+        s.put_manifest("namespace", "tag", &m).unwrap();
+        let m2 = s.get_manifest("namespace", &m.digest()).unwrap();
+        assert_eq!(m, m2);
+    }
+
     #[test]
     fn fs_store_tests() {
         let test_path = format!("/tmp/blobert-test/{}", uuid::Uuid::new_v4());
         let fstore = fs::Filesystem::new(&test_path).unwrap();
         store_puts_and_gets(&fstore);
         store_lists_tags(&fstore);
+        stores_by_digest_and_tag(&fstore);
     }
 }
