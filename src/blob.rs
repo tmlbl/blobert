@@ -1,9 +1,9 @@
-use std::path::PathBuf;
-use std::fs::File;
 use log::debug;
+use std::fs::File;
+use std::path::PathBuf;
 
 pub struct Store {
-    dir: PathBuf
+    dir: PathBuf,
 }
 
 impl Store {
@@ -43,7 +43,7 @@ impl Store {
     pub fn get_upload_file(&self, id: &str) -> Result<File, std::io::Error> {
         let path = self.get_upload_path(id);
         if !path.exists() {
-            debug!("Creating upload temp file at {}",  path.to_str().unwrap());
+            debug!("Creating upload temp file at {}", path.to_str().unwrap());
             File::create(&path)
         } else {
             File::open(&path)
@@ -53,7 +53,11 @@ impl Store {
     pub fn commit(&self, id: &str, digest: &str) -> Result<(), std::io::Error> {
         let src = self.get_upload_path(id);
         let dest = self.get_blob_path(digest);
-        debug!("Moving {} to {}", src.to_str().unwrap(), dest.to_str().unwrap());
+        debug!(
+            "Moving {} to {}",
+            src.to_str().unwrap(),
+            dest.to_str().unwrap()
+        );
         std::fs::rename(src, dest)
     }
 

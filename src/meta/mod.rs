@@ -1,5 +1,4 @@
 use std::io;
-use std::collections::HashMap;
 
 pub mod fs;
 mod manifest;
