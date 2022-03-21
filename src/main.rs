@@ -68,6 +68,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Blobert::new())
             .wrap(Logger::new("%r"))
             .route("/v2/", web::get().to(Blobert::v2))
+            .route("/v2/{namespace}/blobs/{id}", web::get().to(upload::get_blob))
             .route("/v2/{namespace}/blobs/uploads/", web::post().to(upload::start_blob_upload))
             .route("/v2/{namespace}/blobs/upload/{id}", web::patch().to(upload::patch_blob_data))
             .route("/v2/{namespace}/blobs/upload/{id}", web::put().to(upload::put_blob_upload_complete))

@@ -1,9 +1,29 @@
 use log::debug;
 use std::fs::File;
 use std::path::PathBuf;
+use futures::Stream;
 
 pub struct Store {
     dir: PathBuf,
+}
+
+pub struct BlobStream {
+    file: File,
+}
+
+impl BlobStream {
+    pub fn from_file(path: &str) -> Result<BlobStream, std::io::Error> {
+        let file = File::open(path)?;
+        Ok(BlobStream{ file })
+    }
+}
+
+impl Stream for BlobStream {
+    type Item = bytes::Bytes;
+
+    fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
+        todo!()
+    }
 }
 
 impl Store {
@@ -38,6 +58,11 @@ impl Store {
         path.push("blobs");
         path.push(digest);
         path
+    }
+
+    pub fn get_blob(&self, digest: &str) -> Result<BlobStream, std::io::Error> {
+        let path = self.get_blob_path(digest);
+        BlobStream::from_file(path.to_str().unwrap())
     }
 
     pub fn get_upload_file(&self, id: &str) -> Result<File, std::io::Error> {

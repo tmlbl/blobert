@@ -2,11 +2,20 @@ use actix_web::web;
 use actix_web::{Responder, HttpRequest, HttpResponse};
 use futures::StreamExt;
 use uuid::Uuid;
-use log::error;
+use log::{debug, error};
 use std::io::Write;
 use serde::Deserialize;
 
 use crate::Blobert;
+
+pub async fn get_blob(req: HttpRequest) -> impl Responder {
+    let blobert: &Blobert = req.app_data().unwrap();
+    let id = req.match_info().get("id").unwrap();
+
+    debug!("Retrieving blob {}", id);
+
+    HttpResponse::Ok()
+}
 
 pub async fn start_blob_upload(req: HttpRequest) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
