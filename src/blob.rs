@@ -13,21 +13,20 @@ pub struct Store {
 
 pub struct BlobStream {
     file: File,
-    buf: bytes::BytesMut,
 }
 
 impl BlobStream {
     pub fn from_file(path: &str) -> Result<BlobStream, std::io::Error> {
         debug!("Opening blob file {}", path);
         let file = File::open(path)?;
-        Ok(BlobStream{ file, buf: bytes::BytesMut::new() })
+        Ok(BlobStream{ file })
     }
 }
 
 impl Stream for BlobStream {
     type Item = Result<bytes::Bytes, std::io::Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut buf = bytes::BytesMut::with_capacity(4096 * 10);
         buf.resize(4096 * 10, 0);
         let read = self.file.read(&mut buf)?;
