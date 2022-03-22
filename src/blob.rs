@@ -34,6 +34,7 @@ impl Stream for BlobStream {
         if read == 0 {
             return Poll::Ready(None)
         }
+        buf.truncate(read);
         Poll::Ready(Some(Ok(bytes::Bytes::from(buf))))
     }
 }
