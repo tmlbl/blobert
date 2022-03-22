@@ -16,6 +16,7 @@ pub async fn get_blob(req: HttpRequest) -> impl Responder {
     let stream = blobert.blob_store.get_blob(id).unwrap();
 
     HttpResponse::Ok()
+        .append_header(("Docker-Content-Digest", id.clone()))
         .streaming(stream)
 }
 

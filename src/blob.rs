@@ -1,7 +1,11 @@
 use log::debug;
+use futures::Stream;
+
+use std::io::Read;
 use std::fs::File;
 use std::path::PathBuf;
-use futures::Stream;
+use std::pin::Pin;
+use std::task::{Poll, Context};
 
 pub struct Store {
     dir: PathBuf,
@@ -9,20 +13,29 @@ pub struct Store {
 
 pub struct BlobStream {
     file: File,
+    buf: bytes::BytesMut,
 }
 
 impl BlobStream {
     pub fn from_file(path: &str) -> Result<BlobStream, std::io::Error> {
+        debug!("Opening blob file {}", path);
         let file = File::open(path)?;
-        Ok(BlobStream{ file })
+        Ok(BlobStream{ file, buf: bytes::BytesMut::new() })
     }
 }
 
 impl Stream for BlobStream {
     type Item = Result<bytes::Bytes, std::io::Error>;
 
-    fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
-        todo!()
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut buf = bytes::BytesMut::with_capacity(4096 * 10);
+        buf.resize(4096 * 10, 0);
+        let read = self.file.read(&mut buf)?;
+        debug!("Read {} bytes", read);
+        if read == 0 {
+            return Poll::Ready(None)
+        }
+        Poll::Ready(Some(Ok(bytes::Bytes::from(buf))))
     }
 }
 
