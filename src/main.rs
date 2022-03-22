@@ -3,6 +3,7 @@ use actix_web::{web, App, HttpServer, HttpResponse, Responder};
 use actix_web::middleware::Logger;
 use env_logger::Env;
 use structopt::StructOpt;
+use log::error;
 
 mod util;
 mod blob;
@@ -24,6 +25,9 @@ pub struct Options {
 
     #[structopt(short = "log", long, default_value = "info")]
     log_level: String,
+
+    #[structopt(short, long, default_value = "10MB")]
+    buf_size: String,
 }
 
 impl Options {
@@ -33,6 +37,16 @@ impl Options {
 
     pub fn get_server_url(&self) -> String {
         format!("{}://{}", self.protocol, self.get_bind_addr())
+    }
+
+    pub fn get_buf_size_bytes(&self) -> usize {
+        match byte_unit::Byte::from_str(&self.buf_size) {
+            Ok(bytes) => bytes.get_bytes() as usize,
+            Err(e) => {
+                error!("Invalid spec for buffer size: {}", e);
+                std::process::exit(1)
+            }
+        }
     }
 }
 
@@ -45,10 +59,12 @@ pub struct Blobert {
 impl Blobert {
     fn new() -> Blobert {
         let meta_store = meta::fs::Filesystem::new("/tmp/data").unwrap();
+        let opts = Options::from_args();
+        let buf_size = opts.get_buf_size_bytes();
         Blobert {
-            opts: Options::from_args(),
+            opts,
             meta_store: Box::new(meta_store),
-            blob_store: blob::Store::new("/tmp/data")
+            blob_store: blob::Store::new("/tmp/data", buf_size)
         }
     }
 

@@ -9,17 +9,19 @@ use std::task::{Poll, Context};
 
 pub struct Store {
     dir: PathBuf,
+    buf_size: usize,
 }
 
 pub struct BlobStream {
     file: File,
+    buf_size: usize,
 }
 
 impl BlobStream {
-    pub fn from_file(path: &str) -> Result<BlobStream, std::io::Error> {
+    pub fn from_file(path: &str, buf_size: usize) -> Result<BlobStream, std::io::Error> {
         debug!("Opening blob file {}", path);
         let file = File::open(path)?;
-        Ok(BlobStream{ file })
+        Ok(BlobStream{ file, buf_size })
     }
 }
 
@@ -27,8 +29,8 @@ impl Stream for BlobStream {
     type Item = Result<bytes::Bytes, std::io::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut buf = bytes::BytesMut::with_capacity(4096 * 10);
-        buf.resize(4096 * 10, 0);
+        let mut buf = bytes::BytesMut::with_capacity(self.buf_size);
+        buf.resize(self.buf_size, 0);
         let read = self.file.read(&mut buf)?;
         debug!("Read {} bytes", read);
         if read == 0 {
@@ -40,7 +42,7 @@ impl Stream for BlobStream {
 }
 
 impl Store {
-    pub fn new(dir: &str) -> Store {
+    pub fn new(dir: &str, buf_size: usize) -> Store {
         let dir = PathBuf::from(dir);
         debug!("Creating data directory: {}", dir.to_str().unwrap());
         std::fs::create_dir_all(&dir).unwrap();
@@ -56,7 +58,7 @@ impl Store {
         let mut manifests = dir.clone();
         manifests.push("manifests");
         std::fs::create_dir_all(manifests).unwrap();
-        Store { dir }
+        Store { dir, buf_size }
     }
 
     fn get_upload_path(&self, id: &str) -> PathBuf {
@@ -75,7 +77,7 @@ impl Store {
 
     pub fn get_blob(&self, digest: &str) -> Result<BlobStream, std::io::Error> {
         let path = self.get_blob_path(digest);
-        BlobStream::from_file(path.to_str().unwrap())
+        BlobStream::from_file(path.to_str().unwrap(), self.buf_size)
     }
 
     pub fn get_upload_file(&self, id: &str) -> Result<File, std::io::Error> {
