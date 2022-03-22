@@ -16,5 +16,6 @@ layers and pulls distributed among multiple blob servers
 
 - Custom error type to match OCI spec for errors
 - Make BlobStream buffer size configurable and reuse buffer
+- Add blob stat function and "repair" manifests from Docker missing size
 - Add TLS
 - Implement blob cache
