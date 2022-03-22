@@ -19,7 +19,7 @@ impl BlobStream {
 }
 
 impl Stream for BlobStream {
-    type Item = bytes::Bytes;
+    type Item = Result<bytes::Bytes, std::io::Error>;
 
     fn poll_next(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
         todo!()

@@ -13,8 +13,10 @@ pub async fn get_blob(req: HttpRequest) -> impl Responder {
     let id = req.match_info().get("id").unwrap();
 
     debug!("Retrieving blob {}", id);
+    let stream = blobert.blob_store.get_blob(id).unwrap();
 
     HttpResponse::Ok()
+        .streaming(stream)
 }
 
 pub async fn start_blob_upload(req: HttpRequest) -> impl Responder {

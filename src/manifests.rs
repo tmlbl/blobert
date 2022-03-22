@@ -6,6 +6,7 @@ use serde::Serialize;
 
 use crate::Blobert;
 use crate::util::*;
+use crate::meta::IMAGE_MANIFEST_MEDIA_TYPE;
 
 #[derive(Serialize)]
 struct PutManifestResponse {
@@ -22,7 +23,7 @@ pub async fn get_manifest(req: HttpRequest) -> impl Responder {
         Ok(manifest) => {
             let payload = serde_json::to_vec(&manifest).unwrap();
             HttpResponse::Ok()
-                .append_header(("Content-Type", crate::meta::IMAGE_MANIFEST_MEDIA_TYPE))
+                .append_header(("Content-Type", IMAGE_MANIFEST_MEDIA_TYPE))
                 .append_header(("Content-Length", format!("{}", payload.len())))
                 .append_header(("Docker-Content-Digest", manifest.digest()))
                 .body(payload)
