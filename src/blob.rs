@@ -1,3 +1,5 @@
+use crate::error;
+
 use log::debug;
 use futures::Stream;
 
@@ -75,9 +77,20 @@ impl Store {
         path
     }
 
-    pub fn get_blob(&self, digest: &str) -> Result<BlobStream, std::io::Error> {
+    pub fn get_blob(&self, digest: &str) -> Result<BlobStream, error::RegistryError> {
         let path = self.get_blob_path(digest);
-        BlobStream::from_file(path.to_str().unwrap(), self.buf_size)
+        match BlobStream::from_file(path.to_str().unwrap(), self.buf_size) {
+            Ok(stream) => Ok(stream),
+            Err(e) => {
+                match e.kind() {
+                    std::io::ErrorKind::NotFound =>
+                        Err(error::RegistryError::from(error::BLOB_UNKNOWN)),
+                    _ => {
+                        Err(error::RegistryError::from(error::BLOB_UNKNOWN))   
+                    }
+                }
+            }
+        }
     }
 
     pub fn get_upload_file(&self, id: &str) -> Result<File, std::io::Error> {

@@ -1,6 +1,8 @@
 use std::{path::PathBuf, os::unix::fs};
 
 use crate::meta::{Store, Manifest};
+use crate::error;
+use crate::error::RegistryError;
 
 pub struct Filesystem {
     data_dir: String
@@ -41,13 +43,19 @@ impl Store for Filesystem {
         }
     }
 
-    fn get_manifest(&self, namespace: &str, reference: &str) -> Result<Manifest, std::io::Error> {
+    fn get_manifest(&self, namespace: &str, reference: &str) -> Result<Manifest, RegistryError> {
         let mut path = self.get_manifest_path(namespace);
         path.push(reference);
 
         match std::fs::read(path) {
             Ok(data) => Ok(serde_json::from_slice(&data).unwrap()),
-            Err(e) => Err(e)
+            Err(e) => {
+                match e.kind() {
+                    std::io::ErrorKind::NotFound =>
+                        Err(RegistryError::from(error::MANIFEST_UNKNOWN)),
+                    _ => Err(RegistryError::from(error::UNKNOWN_ERROR))
+                }
+            }
         }
     }
 

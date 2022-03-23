@@ -1,4 +1,5 @@
 use std::io;
+use crate::error::RegistryError;
 
 pub mod fs;
 mod manifest;
@@ -7,7 +8,7 @@ pub use manifest::*;
 
 pub trait Store {
     fn put_manifest(&self, namespace: &str, reference: &str, m: &Manifest) -> Result<(), io::Error>;
-    fn get_manifest(&self, namespace: &str, reference: &str) -> Result<Manifest, io::Error>;
+    fn get_manifest(&self, namespace: &str, reference: &str) -> Result<Manifest, RegistryError>;
     fn list_tags(&self, namespace: &str) -> Vec<String>;
 }
 
@@ -33,7 +34,7 @@ mod tests {
 
     fn stores_by_digest_and_tag(s: &dyn Store) {
         let mut m = Manifest::default();
-        let mut anno = HashMap::new();
+        let mut anno = std::collections::HashMap::new();
         anno.insert(String::from("foo"), String::from("bar"));
         m.annotations = Some(anno);
         s.put_manifest("namespace", "tag", &m).unwrap();

@@ -6,6 +6,7 @@ use structopt::StructOpt;
 use log::error;
 
 mod util;
+mod error;
 mod blob;
 mod upload;
 mod manifests;

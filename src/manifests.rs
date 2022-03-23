@@ -31,7 +31,7 @@ pub async fn get_manifest(req: HttpRequest) -> impl Responder {
         Err(e) => {
             error!("Error retrieving manifest {}/{}: {}",
                 namespace, reference, e);
-            HttpResponse::InternalServerError().finish()
+            e.to_response()
         }
     }
 }
