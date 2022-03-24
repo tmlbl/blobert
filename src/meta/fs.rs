@@ -35,14 +35,22 @@ impl Store for Filesystem {
         let mut sha_path = self.get_manifest_path(namespace);
         sha_path.push(m.digest());
 
-        match std::fs::write(&sha_path, serde_json::to_vec(m).unwrap()) {
-            Err(e) => Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e))),
-            Ok(_) => {
-                match fs::symlink(sha_path, tag_path) {
-                    Err(e) => Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e))),
-                    _ => Ok(())
-                }
+        // If we already have the manifest at this SHA, skip writing
+        if !sha_path.exists() {
+            match std::fs::write(&sha_path, serde_json::to_vec(m).unwrap()) {
+                Err(e) => {
+                    return Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e)))
+                },
+                _ => ()
             }
+        }
+        // Update the symlink
+        if tag_path.exists() {
+            std::fs::remove_file(&tag_path).unwrap()
+        }
+        match fs::symlink(sha_path, tag_path) {
+            Err(e) => Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e))),
+            _ => Ok(())
         }
     }
 
@@ -71,6 +79,7 @@ impl Store for Filesystem {
                 tags.push(String::from(entry.file_name().to_str().unwrap()));
             }
         }
+        tags.sort();
         tags
     }
 }

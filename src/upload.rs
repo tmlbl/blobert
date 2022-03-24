@@ -7,6 +7,7 @@ use std::io::Write;
 use serde::Deserialize;
 
 use crate::Blobert;
+use crate::meta;
 
 pub async fn get_blob(req: HttpRequest) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
@@ -16,6 +17,7 @@ pub async fn get_blob(req: HttpRequest) -> impl Responder {
     let stream = blobert.blob_store.get_blob(id).unwrap();
 
     HttpResponse::Ok()
+        .append_header(("Content-Type", meta::IMAGE_LAYER_MEDIA_TYPE))
         .append_header(("Docker-Content-Digest", id.clone()))
         .streaming(stream)
 }

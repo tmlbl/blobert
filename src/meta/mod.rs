@@ -41,6 +41,12 @@ mod tests {
         assert_eq!(m, m2);
     }
 
+    fn allow_overwrite_tag(s: &dyn Store) {
+        let m = Manifest::default();
+        s.put_manifest("replace", "latest", &m).unwrap();
+        s.put_manifest("replace", "latest", &m).unwrap();
+    }
+
     #[test]
     fn fs_store_tests() {
         let test_path = format!("/tmp/blobert-test/{}", uuid::Uuid::new_v4());
@@ -48,5 +54,6 @@ mod tests {
         store_puts_and_gets(&fstore);
         store_lists_tags(&fstore);
         stores_by_digest_and_tag(&fstore);
+        allow_overwrite_tag(&fstore);
     }
 }

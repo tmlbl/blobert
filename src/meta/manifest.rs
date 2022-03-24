@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use crate::util::sha256_digest;
 
 // /// The mediatype for WASM layers.
 // pub const WASM_LAYER_MEDIA_TYPE: &str = "application/vnd.wasm.content.layer.v1+wasm";
@@ -10,8 +11,8 @@ pub const IMAGE_MANIFEST_MEDIA_TYPE: &str = "application/vnd.docker.distribution
 pub const IMAGE_CONFIG_MEDIA_TYPE: &str = "application/vnd.oci.image.config.v1+json";
 // /// The mediatype that Docker uses for image configs.
 // pub const IMAGE_DOCKER_CONFIG_MEDIA_TYPE: &str = "application/vnd.docker.container.image.v1+json";
-// /// The mediatype for a layer.
-// pub const IMAGE_LAYER_MEDIA_TYPE: &str = "application/vnd.oci.image.layer.v1.tar";
+/// The mediatype for a layer.
+pub const IMAGE_LAYER_MEDIA_TYPE: &str = "application/vnd.oci.image.layer.v1.tar";
 // /// The mediatype for a layer that is gzipped.
 // pub const IMAGE_LAYER_GZIP_MEDIA_TYPE: &str = "application/vnd.oci.image.layer.v1.tar+gzip";
 // /// The mediatype that Docker uses for a layer that is gzipped.
@@ -36,7 +37,7 @@ pub struct Manifest {
 
 impl Manifest {
     pub fn digest(&self) -> String {
-        crate::util::sha256_digest(&serde_json::to_vec(self).unwrap())
+        sha256_digest(&serde_json::to_vec(self).unwrap())
     }
 }
 
