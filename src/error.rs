@@ -1,13 +1,13 @@
 use actix_web::{HttpResponse, http::StatusCode};
 use serde::{Serialize, Deserialize};
 
-type Code = (&'static str, &'static str);
+type ErrorSpec = (&'static str, &'static str);
 
-pub const BLOB_UNKNOWN: Code =
+pub const BLOB_UNKNOWN: ErrorSpec =
     ("BLOB_UNKNOWN", "blob unknown to registry"); 
-pub const MANIFEST_UNKNOWN: Code =
+pub const MANIFEST_UNKNOWN: ErrorSpec =
     ("MANIFEST_UNKNOWN", "manifest unknown to registry");
-pub const UNKNOWN_ERROR: Code =
+pub const UNKNOWN_ERROR: ErrorSpec =
     ("UNKNOWN ERROR", "something is very wrong");
 
 /// Error type expected by OCI specification
@@ -37,16 +37,24 @@ struct RegistryErrorResponse {
 }
 
 impl RegistryError {
-    pub fn from(def: Code) -> RegistryError {
+    pub fn from(spec: ErrorSpec) -> RegistryError {
         RegistryError {
-            code: String::from(def.0),
-            message: String::from(def.1),
+            code: String::from(spec.0),
+            message: String::from(spec.1),
             detail: Detail { reason: String::from("") }
         }
     }
 
+    pub fn from_err(spec: ErrorSpec, err: Box<dyn std::error::Error>) -> RegistryError {
+        RegistryError {
+            code: String::from(spec.0),
+            message: String::from(spec.1),
+            detail: Detail { reason: String::from(err.to_string()) }
+        }
+    }
+
     // Convert the error to an HttpResponse for Actix
-    pub fn to_response(&self) -> HttpResponse {
+    pub fn respond(&self) -> HttpResponse {
         let response = RegistryErrorResponse {
             errors: vec![self.clone()]
         };

@@ -28,7 +28,7 @@ impl Filesystem {
 }
 
 impl Store for Filesystem {
-    fn put_manifest(&self, namespace: &str, tag: &str, m: &Manifest) -> Result<(), std::io::Error> {
+    fn put_manifest(&self, namespace: &str, tag: &str, m: &Manifest) -> Result<(), RegistryError> {
         let mut tag_path = self.get_manifest_path(namespace);
         tag_path.push(tag);
 
@@ -36,9 +36,12 @@ impl Store for Filesystem {
         sha_path.push(m.digest());
 
         match std::fs::write(&sha_path, serde_json::to_vec(m).unwrap()) {
-            Err(e) => Err(e),
+            Err(e) => Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e))),
             Ok(_) => {
-                fs::symlink(sha_path, tag_path)
+                match fs::symlink(sha_path, tag_path) {
+                    Err(e) => Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e))),
+                    _ => Ok(())
+                }
             }
         }
     }
@@ -52,8 +55,8 @@ impl Store for Filesystem {
             Err(e) => {
                 match e.kind() {
                     std::io::ErrorKind::NotFound =>
-                        Err(RegistryError::from(error::MANIFEST_UNKNOWN)),
-                    _ => Err(RegistryError::from(error::UNKNOWN_ERROR))
+                        Err(RegistryError::from_err(error::MANIFEST_UNKNOWN, Box::new(e))),
+                    _ => Err(RegistryError::from_err(error::UNKNOWN_ERROR, Box::new(e)))
                 }
             }
         }

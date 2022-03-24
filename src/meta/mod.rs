@@ -1,4 +1,3 @@
-use std::io;
 use crate::error::RegistryError;
 
 pub mod fs;
@@ -7,7 +6,7 @@ mod manifest;
 pub use manifest::*;
 
 pub trait Store {
-    fn put_manifest(&self, namespace: &str, reference: &str, m: &Manifest) -> Result<(), io::Error>;
+    fn put_manifest(&self, namespace: &str, reference: &str, m: &Manifest) -> Result<(), RegistryError>;
     fn get_manifest(&self, namespace: &str, reference: &str) -> Result<Manifest, RegistryError>;
     fn list_tags(&self, namespace: &str) -> Vec<String>;
 }
