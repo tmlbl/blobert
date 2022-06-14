@@ -20,7 +20,7 @@ Status: Downloaded newer image for nats:latest
 docker.io/library/nats:latest
 
 # Tag with localhost or 127.0.0.1. Blobert runs on port 7000
-tim@doulos ~ > docker tag nats 127.0.0.1:7000/nats
+tim@doulos ~> docker tag nats 127.0.0.1:7000/nats
 
 # Push the image to blobert
 tim@doulos ~> docker push 127.0.0.1:7000/nats
