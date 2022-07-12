@@ -1,13 +1,13 @@
 use crate::error;
 
-use log::debug;
 use futures::Stream;
+use log::debug;
 
-use std::io::Read;
 use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::task::{Poll, Context};
+use std::task::{Context, Poll};
 
 pub struct Store {
     dir: PathBuf,
@@ -23,7 +23,7 @@ impl BlobStream {
     pub fn from_file(path: &str, buf_size: usize) -> Result<BlobStream, std::io::Error> {
         debug!("Opening blob file {}", path);
         let file = File::open(path)?;
-        Ok(BlobStream{ file, buf_size })
+        Ok(BlobStream { file, buf_size })
     }
 }
 
@@ -36,7 +36,7 @@ impl Stream for BlobStream {
         let read = self.file.read(&mut buf)?;
         debug!("Read {} bytes", read);
         if read == 0 {
-            return Poll::Ready(None)
+            return Poll::Ready(None);
         }
         buf.truncate(read);
         Poll::Ready(Some(Ok(bytes::Bytes::from(buf))))
@@ -81,15 +81,12 @@ impl Store {
         let path = self.get_blob_path(digest);
         match BlobStream::from_file(path.to_str().unwrap(), self.buf_size) {
             Ok(stream) => Ok(stream),
-            Err(e) => {
-                match e.kind() {
-                    std::io::ErrorKind::NotFound =>
-                        Err(error::RegistryError::from(error::BLOB_UNKNOWN)),
-                    _ => {
-                        Err(error::RegistryError::from(error::BLOB_UNKNOWN))   
-                    }
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    Err(error::RegistryError::from(error::BLOB_UNKNOWN))
                 }
-            }
+                _ => Err(error::RegistryError::from(error::BLOB_UNKNOWN)),
+            },
         }
     }
 
@@ -99,7 +96,7 @@ impl Store {
             debug!("Creating upload temp file at {}", path.to_str().unwrap());
             File::create(&path)
         } else {
-            File::open(&path)
+            File::options().append(true).open(&path)
         }
     }
 

@@ -1,19 +1,19 @@
 use actix_web::web;
-use actix_web::{Responder, HttpRequest, HttpResponse};
+use actix_web::{HttpRequest, HttpResponse, Responder};
 use futures::StreamExt;
-use uuid::Uuid;
 use log::{debug, error};
-use std::io::Write;
+use regex::Regex;
 use serde::Deserialize;
+use std::io::Write;
+use uuid::Uuid;
 
-use crate::Blobert;
 use crate::meta;
+use crate::Blobert;
 
 pub async fn get_blob(req: HttpRequest) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
     let id = req.match_info().get("id").unwrap();
 
-    debug!("Retrieving blob {}", id);
     let stream = blobert.blob_store.get_blob(id).unwrap();
 
     HttpResponse::Ok()
@@ -26,16 +26,23 @@ pub async fn start_blob_upload(req: HttpRequest) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
     let id = Uuid::new_v4();
     let namespace = req.match_info().get("namespace").unwrap();
-    let location = format!("{}/v2/{}/blobs/upload/{}", 
-            blobert.opts.get_server_url(), namespace, id);
-
+    let location = format!(
+        "{}/v2/{}/blobs/upload/{}",
+        blobert.opts.get_server_url(),
+        namespace,
+        id
+    );
     HttpResponse::Accepted()
         .append_header(("Location", location))
         .append_header(("Docker-Upload-UUID", id.to_string()))
         .finish()
 }
 
-pub async fn patch_blob_data(req: HttpRequest, mut payload: web::Payload) -> impl Responder {
+pub async fn patch_blob_data(
+    req: HttpRequest,
+    mut payload: web::Payload,
+    regex: web::Data<Regex>,
+) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
     let namespace = req.match_info().get("namespace").unwrap();
     let id = req.match_info().get("id").unwrap();
@@ -44,31 +51,33 @@ pub async fn patch_blob_data(req: HttpRequest, mut payload: web::Payload) -> imp
         Ok(f) => f,
         Err(e) => {
             error!("Error getting upload file: {}", e);
-            return HttpResponse::InternalServerError().finish()
-        },
+            return HttpResponse::InternalServerError().finish();
+        }
     };
-
+    // let content_length = req.headers().get("content-length");
     let mut written: usize = 0;
 
     while let Some(chunk) = payload.next().await {
         match chunk {
-            Ok(chunk) => {
-                match blobfile.write(&chunk) {
-                    Ok(size) => written += size,
-                    Err(e) => {
-                        error!("Error writing upload file: {}", e);
-                        return HttpResponse::InternalServerError().finish()
-                    }
+            Ok(chunk) => match blobfile.write(&chunk) {
+                Ok(size) => written += size,
+                Err(e) => {
+                    error!("Error writing upload file: {}", e);
+                    return HttpResponse::InternalServerError().finish();
                 }
             },
             Err(e) => {
                 error!("Error getting chunk: {}", e);
-                return HttpResponse::InternalServerError().finish()
+                return HttpResponse::InternalServerError().finish();
             }
         }
     }
-    let location = format!("{}/v2/{}/blobs/upload/{}", 
-            blobert.opts.get_server_url(), namespace, id);
+    let location = format!(
+        "{}/v2/{}/blobs/upload/{}",
+        blobert.opts.get_server_url(),
+        namespace,
+        id
+    );
     HttpResponse::Accepted()
         .append_header(("Location", location))
         .append_header(("Docker-Upload-UUID", id.to_string()))
@@ -79,18 +88,28 @@ pub async fn patch_blob_data(req: HttpRequest, mut payload: web::Payload) -> imp
 
 #[derive(Deserialize)]
 pub struct PutDigest {
-    digest: String
+    digest: String,
 }
 
-pub async fn put_blob_upload_complete(req: HttpRequest, info: web::Query<PutDigest>) -> impl Responder {
+pub async fn put_blob_upload_complete(
+    req: HttpRequest,
+    info: web::Query<PutDigest>,
+) -> impl Responder {
+    debug!("put_blob_upload_complete {:?}", req);
     let blobert: &Blobert = req.app_data().unwrap();
     let id = req.match_info().get("id").unwrap();
+    let namespace = req.match_info().get("namespace").unwrap();
 
+    // /v2/<name>/blobs/<digest>
     match blobert.blob_store.commit(id, &info.digest) {
-        Ok(_) => HttpResponse::Created()
-            .append_header(("Content-Length", "0"))
-            .append_header(("Docker-Content-Digest", info.digest.clone()))
-            .finish(),
+        Ok(_) => {
+            let location = format!("/v2/{}/blobs/upload/{}", namespace, info.digest);
+            HttpResponse::Created()
+                .append_header(("Location", location))
+                .append_header(("Content-Length", "0"))
+                .append_header(("Docker-Content-Digest", info.digest.clone()))
+                .finish()
+        }
         Err(e) => {
             error!("Error getting chunk: {}", e);
             HttpResponse::InternalServerError().finish()
@@ -105,6 +124,6 @@ pub async fn blob_exists(req: HttpRequest) -> impl Responder {
         true => HttpResponse::Ok()
             .append_header(("Docker-Content-Digest", digest))
             .finish(),
-        false => HttpResponse::NotFound().finish()
+        false => HttpResponse::NotFound().finish(),
     }
 }
