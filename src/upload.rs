@@ -4,10 +4,7 @@ use futures::StreamExt;
 use log::{debug, error};
 use regex::Regex;
 use serde::Deserialize;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Seek, SeekFrom, Write};
-use std::sync::Arc;
+use std::io::Write;
 use uuid::Uuid;
 
 use crate::meta;

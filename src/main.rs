@@ -1,7 +1,5 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::Arc;
 // use oci_distribution::manifest;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
@@ -134,14 +132,13 @@ async fn main() -> std::io::Result<()> {
 }
 
 fn load_rustls_config() -> rustls::ServerConfig {
-    // init server config builder with safe defaults
     let config = ServerConfig::builder()
         .with_safe_defaults()
         .with_no_client_auth();
 
     // load TLS key/cert files
-    let cert_file = &mut BufReader::new(File::open("www.duduwuli.cn_bundle.pem").unwrap());
-    let key_file = &mut BufReader::new(File::open("www.duduwuli.cn.key").unwrap());
+    let cert_file = &mut BufReader::new(File::open("localhost.crt").unwrap());
+    let key_file = &mut BufReader::new(File::open("localhost_pri.key").unwrap());
 
     // convert files to key/cert objects
     let cert_chain = certs(cert_file)
