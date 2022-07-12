@@ -14,7 +14,6 @@ pub async fn get_blob(req: HttpRequest) -> impl Responder {
     let blobert: &Blobert = req.app_data().unwrap();
     let id = req.match_info().get("id").unwrap();
 
-    debug!("Retrieving blob {}", id);
     let stream = blobert.blob_store.get_blob(id).unwrap();
 
     HttpResponse::Ok()
@@ -24,7 +23,6 @@ pub async fn get_blob(req: HttpRequest) -> impl Responder {
 }
 
 pub async fn start_blob_upload(req: HttpRequest) -> impl Responder {
-    debug!("start_blob_upload {:?}", req);
     let blobert: &Blobert = req.app_data().unwrap();
     let id = Uuid::new_v4();
     let namespace = req.match_info().get("namespace").unwrap();
@@ -45,12 +43,10 @@ pub async fn patch_blob_data(
     mut payload: web::Payload,
     regex: web::Data<Regex>,
 ) -> impl Responder {
-    debug!("patch_blob_data {:?}", req);
     let blobert: &Blobert = req.app_data().unwrap();
     let namespace = req.match_info().get("namespace").unwrap();
     let id = req.match_info().get("id").unwrap();
 
-    debug!("patch_blob_data id: {}", id);
     let mut blobfile = match blobert.blob_store.get_upload_file(id) {
         Ok(f) => f,
         Err(e) => {
@@ -60,17 +56,6 @@ pub async fn patch_blob_data(
     };
     // let content_length = req.headers().get("content-length");
     let mut written: usize = 0;
-
-    if let Some(content_range) = req.headers().get("content-range") {
-        if let Ok(content_range) = content_range.to_str() {
-            let cap = regex.captures(content_range).unwrap();
-            let start: u64 = cap.get(1).unwrap().as_str().parse().unwrap();
-            let end: u64 = cap.get(2).unwrap().as_str().parse().unwrap();
-            debug!("{}-{}", start, end);
-            debug!("file len={}", blobfile.metadata().unwrap().len());
-            // blobfile.seek(SeekFrom::Start(start)).unwrap();
-        }
-    }
 
     while let Some(chunk) = payload.next().await {
         match chunk {

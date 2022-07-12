@@ -22,7 +22,7 @@ pub struct Options {
     #[structopt(long, default_value = "https")]
     protocol: String,
 
-    #[structopt(short, long, default_value = "www.duduwuli.cn")]
+    #[structopt(short, long, default_value = "localhost")]
     host: String,
 
     #[structopt(short, long, default_value = "7000")]
