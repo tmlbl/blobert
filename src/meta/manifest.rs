@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::util::sha256_digest;
+use std::collections::HashMap;
 
 // /// The mediatype for WASM layers.
 // pub const WASM_LAYER_MEDIA_TYPE: &str = "application/vnd.wasm.content.layer.v1+wasm";

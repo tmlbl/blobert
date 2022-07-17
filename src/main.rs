@@ -3,8 +3,8 @@ use std::io::BufReader;
 // use oci_distribution::manifest;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use env_logger::Env;
 use log::error;
+use log::LevelFilter::{Debug, Info};
 use rustls::{Certificate, PrivateKey, ServerConfig};
 use rustls_pemfile::{certs, rsa_private_keys};
 use structopt::StructOpt;
@@ -22,7 +22,7 @@ pub struct Options {
     #[structopt(long, default_value = "https")]
     protocol: String,
 
-    #[structopt(short, long, default_value = "localhost")]
+    #[structopt(short, long, default_value = "www.duduwuli.cn")]
     host: String,
 
     #[structopt(short, long, default_value = "7000")]
@@ -81,9 +81,14 @@ impl Blobert {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let opts = Options::from_args();
-    let bind_addr = opts.get_bind_addr();
-    env_logger::init_from_env(Env::default().default_filter_or(&opts.log_level));
+    // let bind_addr = opts.get_bind_addr();
+    let bind_addr = "0.0.0.0:7000";
+    // env_logger::init_from_env(Env::default().default_filter_or(&opts.log_level));
 
+    // custom_utils::logger::logger_stdout_debug();
+    custom_utils::logger::logger_feature("register", Debug, Debug)
+        .module("h2", Info)
+        .build();
     let range_regex = web::Data::new(regex::Regex::new("^([0-9]+)-([0-9]+)$").unwrap());
 
     HttpServer::new(move || {
@@ -97,6 +102,7 @@ async fn main() -> std::io::Result<()> {
                 web::get().to(upload::get_blob),
             )
             .route(
+                // 获取上传的location（uuid）
                 "/v2/{namespace}/blobs/uploads/",
                 web::post().to(upload::start_blob_upload),
             )
@@ -105,6 +111,7 @@ async fn main() -> std::io::Result<()> {
                 web::patch().to(upload::patch_blob_data),
             )
             .route(
+                // 整体上传
                 "/v2/{namespace}/blobs/upload/{id}",
                 web::put().to(upload::put_blob_upload_complete),
             )
@@ -137,8 +144,8 @@ fn load_rustls_config() -> rustls::ServerConfig {
         .with_no_client_auth();
 
     // load TLS key/cert files
-    let cert_file = &mut BufReader::new(File::open("localhost.crt").unwrap());
-    let key_file = &mut BufReader::new(File::open("localhost_pri.key").unwrap());
+    let cert_file = &mut BufReader::new(File::open("www.duduwuli.cn_bundle.pem").unwrap());
+    let key_file = &mut BufReader::new(File::open("www.duduwuli.cn.key").unwrap());
 
     // convert files to key/cert objects
     let cert_chain = certs(cert_file)

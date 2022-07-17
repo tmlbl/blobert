@@ -63,7 +63,7 @@ impl Store {
         Store { dir, buf_size }
     }
 
-    fn get_upload_path(&self, id: &str) -> PathBuf {
+    pub fn get_upload_path(&self, id: &str) -> PathBuf {
         let mut path = PathBuf::from(&self.dir);
         path.push("upload");
         path.push(id);
