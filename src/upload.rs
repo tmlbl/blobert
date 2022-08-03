@@ -28,7 +28,7 @@ pub async fn start_blob_upload(req: HttpRequest) -> impl Responder {
     let namespace = req.match_info().get("namespace").unwrap();
     let location = format!(
         "{}/v2/{}/blobs/upload/{}",
-        blobert.opts.get_server_url(),
+        blobert.get_server_url(),
         namespace,
         id
     );
@@ -70,7 +70,7 @@ pub async fn patch_blob_data(req: HttpRequest, mut payload: web::Payload) -> imp
     }
     let location = format!(
         "{}/v2/{}/blobs/upload/{}",
-        blobert.opts.get_server_url(),
+        blobert.get_server_url(),
         namespace,
         id
     );

@@ -5,7 +5,7 @@ use log::{debug, error};
 use serde::Serialize;
 
 use crate::meta::IMAGE_MANIFEST_MEDIA_TYPE;
-use crate::util::*;
+// use crate::util::*;
 use crate::Blobert;
 
 #[derive(Serialize)]
@@ -79,7 +79,7 @@ pub async fn put_manifest(req: HttpRequest, mut payload: web::Payload) -> impl R
             };
             let location = format!(
                 "{}/v2/{}/manifests/{}",
-                blobert.opts.get_server_url(),
+                blobert.get_server_url(),
                 namespace,
                 reference
             );

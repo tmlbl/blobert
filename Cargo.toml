@@ -29,5 +29,5 @@ custom-utils = "0.10.2"
 anyhow = "1.0.58"
 
 
-[patch.crates-io]
-custom-utils = {path = "../custom-utils"}
+#[patch.crates-io]
+#custom-utils = {path = "../custom-utils"}
